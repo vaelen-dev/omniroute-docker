@@ -38,7 +38,7 @@ push_db() {
         git config user.email "sync@omniroute.local"
         git add storage.sqlite
         if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-            echo "[Persistent-Sync] Detected changes. Pushing to GitHub..."
+            echo "[Persistent-Sync] Detected changes in storage.sqlite. Pushing to GitHub..."
             git commit -m "Auto-backup $(date -u '+%Y-%m-%d %H:%M:%SZ')" 2>/dev/null || true
             git push origin main 2>/dev/null && echo "[Persistent-Sync] Database snapshot successfully pushed to GitHub!" || echo "[Persistent-Sync] Push failed, retrying next cycle."
         fi
@@ -63,28 +63,15 @@ if [ -n "$GITHUB_PAT" ]; then
     ) &
 fi
 
-# Ensure default start command if not passed
-if [ $# -eq 0 ]; then
-    if [ -f "/app/scripts/dev/run-standalone.mjs" ]; then
-        set -- node /app/scripts/dev/run-standalone.mjs
-    elif [ -f "scripts/dev/run-standalone.mjs" ]; then
-        set -- node scripts/dev/run-standalone.mjs
-    elif [ -f "/app/dev/run-standalone.mjs" ]; then
-        set -- node /app/dev/run-standalone.mjs
-    elif [ -f "/app/server.js" ]; then
-        set -- node /app/server.js
-    else
-        set -- node server.js
-    fi
-fi
-
-echo "[Persistent-Sync] Launching OmniRoute service: $@"
+echo "[Persistent-Sync] Launching OmniRoute Next.js server..."
 cd /app
 
-if [ -f "/app/scripts/check-permissions.sh" ]; then
-    exec /app/scripts/check-permissions.sh "$@"
-elif [ -f "/app/check-permissions.sh" ]; then
-    exec /app/check-permissions.sh "$@"
-else
+if [ -f "/app/server.js" ]; then
+    exec node /app/server.js
+elif [ -f "server.js" ]; then
+    exec node server.js
+elif [ $# -gt 0 ]; then
     exec "$@"
+else
+    exec npm start
 fi
