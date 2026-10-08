@@ -17,6 +17,7 @@ if [ -n "$GITHUB_PAT" ]; then
             echo "[Persistent-Sync] Restoring storage.sqlite ($DB_SIZE bytes)..."
             cp "$SYNC_DIR/storage.sqlite" "$DATA_DIR/storage.sqlite"
             chmod 666 "$DATA_DIR/storage.sqlite"
+            echo "[Persistent-Sync] Restoration complete!"
         else
             echo "[Persistent-Sync] No existing database in repo yet; starting fresh."
         fi
@@ -62,9 +63,28 @@ if [ -n "$GITHUB_PAT" ]; then
     ) &
 fi
 
-echo "[Persistent-Sync] Launching OmniRoute service..."
-if [ -f "/app/check-permissions.sh" ]; then
+# Ensure default start command if not passed
+if [ $# -eq 0 ]; then
+    if [ -f "/app/scripts/dev/run-standalone.mjs" ]; then
+        set -- node /app/scripts/dev/run-standalone.mjs
+    elif [ -f "scripts/dev/run-standalone.mjs" ]; then
+        set -- node scripts/dev/run-standalone.mjs
+    elif [ -f "/app/dev/run-standalone.mjs" ]; then
+        set -- node /app/dev/run-standalone.mjs
+    elif [ -f "/app/server.js" ]; then
+        set -- node /app/server.js
+    else
+        set -- node server.js
+    fi
+fi
+
+echo "[Persistent-Sync] Launching OmniRoute service: $@"
+cd /app
+
+if [ -f "/app/scripts/check-permissions.sh" ]; then
+    exec /app/scripts/check-permissions.sh "$@"
+elif [ -f "/app/check-permissions.sh" ]; then
     exec /app/check-permissions.sh "$@"
 else
-    exec node dev/run-standalone.mjs "$@"
+    exec "$@"
 fi
